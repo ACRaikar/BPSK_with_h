@@ -1,0 +1,48 @@
+clear; 
+clc;
+
+%Generating input bits
+N = 1000000;
+m = randi([0,1],1,N);
+
+%Mapping
+for i=1:N
+    if m(i)==0
+        x(i)=-1;
+    else
+        x(i) = 1;
+    end
+end
+
+BPSK_sim = [];
+BPSK_SNR = [];
+BPSK_erfc = [];
+BPSK_qfunc = [];
+
+for EbNodB = 0:1:30
+    EbNo = 10^(EbNodB/10);
+    sigma = sqrt(1/EbNo);   
+    n = (1/sqrt(2))*[randn(1,length(x))+1j*randn(1,length(x))]; 
+    h = (1/sqrt(2))*[randn(1,length(x))+1j*randn(1,length(x))]; %AWGN Noise
+    R = h.*x + sigma.*n;
+    Rt= R./h;
+    m_cap = (Rt>0);             %Threshold
+    err = sum(m~=m_cap);        %Detection
+    err = err/N;
+    BPSK_sim = [BPSK_sim err];  %Simulation
+    erf = 0.5*erfc(sqrt(EbNo));
+    BPSK_erfc = [BPSK_erfc erf]; %erfc function
+    q = 0.5*(1-sqrt(EbNo/(EbNo+1)));
+    BPSK_qfunc = [BPSK_qfunc q]; %Q-function
+    high_SNR = 1/(4*EbNo);
+    BPSK_SNR = [BPSK_SNR high_SNR];
+end
+
+figure
+EbNodB = 0:1:30;
+semilogy(EbNodB, BPSK_sim, "r+-", EbNodB, BPSK_erfc, "k*-", EbNodB, BPSK_qfunc, "go-", EbNodB, BPSK_SNR, "b^-")
+title("BPSK BER")
+xlabel("SNR(Eb/No)");
+ylabel("Bit Error Rate");
+legend('Simulation','Theoretical-erfc','Theoretical-qfunc','High SNR');
+grid on;
